@@ -120,8 +120,48 @@ elif [ "$BENCHMARK" == "openllm" ]; then
     echo "Elapsed Time: $(($end-$start)) seconds"
     
     python ../llm-autoeval/main.py . $(($end-$start))
+
+elif [ "$BENCHMARK" == "evalplus" ]; then
+    git clone https://github.com/plaguss/evalplus.git
+    cd evalplus
+    pip install -e .
+    pip install -r requirements-llm.txt
+
+    benchmark="human_plus"
+    # Generate code
+    evalplus.codegen \
+        --model $MODEL \
+        --temperature 0.8 \
+        --dataset "humaneval" \
+        --root ./output_dir_${benchmark} \
+        --n_samples 1 \
+        --contract-type "none" \
+        --greedy
+
+    # Evaluate
+    evalplus.evaluate --dataset humaneval --samples samples.jsonl --mini
+
+    benchmark="mbpp_plus"
+    evalplus.codegen \
+        --model $MODEL \
+        --temperature 0.8 \
+        --dataset "mbpp" \
+        --root ./output_dir_${benchmark} \
+        --n_samples 1 \
+        --contract-type "none" \
+        --greedy
+
+    evalplus.evaluate --dataset mbpp --samples samples.jsonl --mini
+
+    # TODO Prepare results as expected by LLM AutoEval
+
+    end=$(date +%s)
+    echo "Elapsed Time: $(($end-$start)) seconds"
+    
+    python ../llm-autoeval/main.py . $(($end-$start))
+
 else
-    echo "Error: Invalid BENCHMARK value. Please set BENCHMARK to 'nous' or 'openllm'."
+    echo "Error: Invalid BENCHMARK value. Please set BENCHMARK to 'nous', 'openllm' or 'evalplus'."
 fi
 
 if [ "$DEBUG" == "False" ]; then
